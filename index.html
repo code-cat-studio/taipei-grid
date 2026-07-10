@@ -194,12 +194,17 @@
 
   .lightbox-frame{
     position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+  }
+
+  .lightbox-frame.placeholder{
     width:min(70vh, 80vw);
     aspect-ratio:1;
     background:#1c1b18;
     overflow:hidden;
-    background-size:cover;
-    background-position:center;
   }
 
   .lightbox-frame.placeholder::before{
@@ -209,6 +214,22 @@
     background:linear-gradient(135deg, #201f1c 25%, #171614 25%, #171614 50%, #201f1c 50%, #201f1c 75%, #171614 75%);
     background-size:20px 20px;
     opacity:0.5;
+  }
+
+  .lightbox-img{
+    display:none;
+    max-width:88vw;
+    max-height:78vh;
+    width:auto;
+    height:auto;
+    object-fit:contain;
+  }
+
+  .lightbox-frame.has-photo .lightbox-img{ display:block; }
+
+  .lightbox-frame.has-photo .lightbox-ref{
+    bottom:-1.8rem;
+    left:0;
   }
 
   .lightbox-ref{
@@ -251,6 +272,7 @@
   <button class="lightbox-close" id="lbClose" aria-label="Close">Close &times;</button>
   <button class="lightbox-prev" id="lbPrev" aria-label="Previous">&larr;</button>
   <div class="lightbox-frame" id="lbFrame">
+    <img class="lightbox-img" id="lbImg" alt="">
     <span class="lightbox-ref" id="lbRef"></span>
   </div>
   <button class="lightbox-next" id="lbNext" aria-label="Next">&rarr;</button>
@@ -287,6 +309,10 @@
 </section>
 
 <script>
+  // Bump this any time replaced photos aren't showing up — forces
+  // browsers (mobile Safari especially) to skip a stale cached response.
+  const CACHE_VERSION = '1';
+
   // ---- Top 16: fixed grid, file-named by coordinate (A1.jpg ... D4.jpg) ----
   // Drop a photo named e.g. "photos/A1.jpg" in to fill that square.
   // Missing files silently fall back to the placeholder texture.
@@ -346,17 +372,19 @@
   // Attempts to load a real photo; leaves the placeholder texture untouched on failure.
   function tryLoadPhoto(cell, path){
     const img = new Image();
+    const src = `${path}?v=${CACHE_VERSION}`;
     img.onload = () => {
-      cell.style.backgroundImage = `url('${path}')`;
+      cell.style.backgroundImage = `url('${src}')`;
       cell.classList.remove('placeholder');
     };
     img.onerror = () => { /* no file yet — keep placeholder */ };
-    img.src = path;
+    img.src = src;
   }
 
   // ---- Lightbox (shared by both grids, cycles within whichever section opened it) ----
   const lightbox = document.getElementById('lightbox');
   const lbFrame = document.getElementById('lbFrame');
+  const lbImg = document.getElementById('lbImg');
   const lbRef = document.getElementById('lbRef');
   let currentRefs = [];
   let current = 0;
@@ -371,13 +399,16 @@
     const item = currentRefs[current];
     lbRef.textContent = item.label;
     lbFrame.classList.add('placeholder');
-    lbFrame.style.backgroundImage = '';
+    lbFrame.classList.remove('has-photo');
+    lbImg.removeAttribute('src');
+    const src = `${item.path}?v=${CACHE_VERSION}`;
     const img = new Image();
     img.onload = () => {
-      lbFrame.style.backgroundImage = `url('${item.path}')`;
+      lbImg.src = src;
       lbFrame.classList.remove('placeholder');
+      lbFrame.classList.add('has-photo');
     };
-    img.src = item.path;
+    img.src = src;
   }
   function closeLightbox(){ lightbox.classList.remove('open'); }
   function step(delta){
@@ -386,15 +417,31 @@
   }
 
   document.getElementById('lbClose').addEventListener('click', closeLightbox);
-  document.getElementById('lbPrev').addEventListener('click', () => step(-1));
-  document.getElementById('lbNext').addEventListener('click', () => step(1));
+  document.getElementById('lbPrev').addEventListener('click', (e) => { e.stopPropagation(); step(-1); });
+  document.getElementById('lbNext').addEventListener('click', (e) => { e.stopPropagation(); step(1); });
   lightbox.addEventListener('click', (e) => { if (e.target === lightbox) closeLightbox(); });
+  lbFrame.addEventListener('click', closeLightbox); // tap/click the photo itself to close
   document.addEventListener('keydown', (e) => {
     if (!lightbox.classList.contains('open')) return;
     if (e.key === 'Escape') closeLightbox();
     if (e.key === 'ArrowLeft') step(-1);
     if (e.key === 'ArrowRight') step(1);
   });
+
+  // Swipe left/right to navigate on touch devices
+  let touchStartX = 0, touchStartY = 0;
+  lightbox.addEventListener('touchstart', (e) => {
+    touchStartX = e.changedTouches[0].clientX;
+    touchStartY = e.changedTouches[0].clientY;
+  }, { passive: true });
+  lightbox.addEventListener('touchend', (e) => {
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    const dy = e.changedTouches[0].clientY - touchStartY;
+    const SWIPE_THRESHOLD = 50;
+    if (Math.abs(dx) > SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy)) {
+      step(dx < 0 ? 1 : -1); // swipe left → next, swipe right → previous
+    }
+  }, { passive: true });
 </script>
 
 </body>
