@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Taipei Grid</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500&family=Space+Mono:wght@400;700&display=swap');
+
+  :root{
+    --bg:#100f0d;
+    --ink:#f1efe8;
+    --ink-dim:#8a8880;
+    --line:#2a2926;
+    --amber:#c98a2f;
+    --amber-dim:#6b5626;
+  }
+
+  *{ box-sizing:border-box; margin:0; padding:0; }
+
+  html{ scroll-behavior:smooth; }
+
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Space Mono', monospace;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  header{
+    padding:5rem 1.5rem 0;
+    text-align:center;
+  }
+
+  h1{
+    font-family:'Fraunces', serif;
+    font-weight:500;
+    font-size:clamp(2.2rem, 6vw, 3.6rem);
+    letter-spacing:-0.01em;
+  }
+
+  .bio{
+    margin-top:1.1rem;
+    color:var(--ink-dim);
+    font-size:0.8rem;
+    line-height:1.9;
+    letter-spacing:0.02em;
+  }
+
+  .bio .div{
+    color:var(--ink-dim);
+    margin:0 0.4em;
+    font-size:0.85em;
+    display:inline-block;
+    transform:translateY(1px);
+  }
+
+  .ig-link{
+    display:inline-block;
+    margin-top:1.8rem;
+    color:var(--amber);
+    text-decoration:underline;
+    text-underline-offset:3px;
+    font-size:0.75rem;
+    letter-spacing:0.05em;
+    transition:color 0.2s ease;
+  }
+  .ig-link:hover{ color:var(--ink); }
+
+  .header-rule{
+    max-width:1100px;
+    margin:3rem auto 0;
+    border-bottom:1px solid var(--line);
+  }
+
+  main{
+    max-width:1100px;
+    margin:0 auto;
+    padding:3rem 1.5rem;
+  }
+
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(4, 1fr);
+    gap:2px;
+    background:var(--line);
+  }
+
+  .cell{
+    position:relative;
+    aspect-ratio:1;
+    background:#1c1b18;
+    overflow:hidden;
+    cursor:pointer;
+    background-size:cover;
+    background-position:center;
+  }
+
+  .cell.placeholder::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:linear-gradient(135deg, #201f1c 25%, #171614 25%, #171614 50%, #201f1c 50%, #201f1c 75%, #171614 75%);
+    background-size:16px 16px;
+    opacity:0.5;
+  }
+
+  .cell .ref{
+    position:absolute;
+    bottom:8px;
+    left:10px;
+    font-size:0.65rem;
+    color:var(--ink-dim);
+    letter-spacing:0.08em;
+    z-index:2;
+    transition:color 0.2s ease;
+  }
+
+  .cell::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    border:1px solid transparent;
+    transition:border-color 0.2s ease, background 0.2s ease;
+    z-index:1;
+  }
+
+  .cell:hover::after{
+    border-color:var(--amber-dim);
+    background:rgba(201,138,47,0.05);
+  }
+
+  .cell:hover .ref{ color:var(--amber); }
+
+  .coords-divider{
+    text-align:center;
+    color:var(--amber);
+    font-size:0.7rem;
+    letter-spacing:0.15em;
+    text-transform:uppercase;
+    padding:1rem 1.5rem 3rem;
+  }
+
+  .section-head{
+    text-align:center;
+    padding:1rem 1.5rem 2rem;
+  }
+
+  .section-head h2{
+    font-family:'Fraunces', serif;
+    font-weight:500;
+    font-size:clamp(1.6rem, 4vw, 2.2rem);
+    letter-spacing:-0.01em;
+  }
+
+  .section-bio{
+    margin-top:0.9rem;
+    color:var(--ink-dim);
+    font-size:0.8rem;
+    line-height:1.9;
+    letter-spacing:0.02em;
+  }
+
+  .section-bio .cn{
+    display:block;
+    color:var(--ink-dim);
+  }
+
+  .section-bio .div{
+    color:var(--ink-dim);
+    margin:0 0.4em;
+    font-size:0.85em;
+    display:inline-block;
+    transform:translateY(1px);
+  }
+
+  @media (max-width:640px){
+    .grid{ grid-template-columns:repeat(2, 1fr); }
+    header{ padding:3.5rem 1.25rem 0; }
+  }
+
+  .lightbox{
+    position:fixed;
+    inset:0;
+    background:rgba(8,7,6,0.94);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:100;
+    padding:2rem;
+  }
+
+  .lightbox.open{ display:flex; }
+
+  .lightbox-frame{
+    position:relative;
+    width:min(70vh, 80vw);
+    aspect-ratio:1;
+    background:#1c1b18;
+    overflow:hidden;
+    background-size:cover;
+    background-position:center;
+  }
+
+  .lightbox-frame.placeholder::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:linear-gradient(135deg, #201f1c 25%, #171614 25%, #171614 50%, #201f1c 50%, #201f1c 75%, #171614 75%);
+    background-size:20px 20px;
+    opacity:0.5;
+  }
+
+  .lightbox-ref{
+    position:absolute;
+    bottom:14px;
+    left:16px;
+    font-size:0.85rem;
+    letter-spacing:0.1em;
+    color:var(--amber);
+    z-index:2;
+  }
+
+  .lightbox-close, .lightbox-prev, .lightbox-next{
+    position:fixed;
+    background:none;
+    border:1px solid var(--line);
+    color:var(--ink-dim);
+    font-family:'Space Mono', monospace;
+    font-size:0.85rem;
+    cursor:pointer;
+    padding:0.5rem 0.8rem;
+    transition:border-color 0.2s ease, color 0.2s ease;
+  }
+  .lightbox-close:hover, .lightbox-prev:hover, .lightbox-next:hover{
+    border-color:var(--amber); color:var(--amber);
+  }
+
+  .lightbox-close{ top:1.5rem; right:1.5rem; }
+  .lightbox-prev{ left:1.5rem; top:50%; transform:translateY(-50%); }
+  .lightbox-next{ right:1.5rem; top:50%; transform:translateY(-50%); }
+
+  @media (max-width:640px){
+    .lightbox-prev, .lightbox-next{ padding:0.5rem 0.6rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="lightbox" id="lightbox">
+  <button class="lightbox-close" id="lbClose" aria-label="Close">Close &times;</button>
+  <button class="lightbox-prev" id="lbPrev" aria-label="Previous">&larr;</button>
+  <div class="lightbox-frame" id="lbFrame">
+    <span class="lightbox-ref" id="lbRef"></span>
+  </div>
+  <button class="lightbox-next" id="lbNext" aria-label="Next">&rarr;</button>
+</div>
+
+<header>
+  <h1>The Taipei Grid</h1>
+  <p class="bio">
+    Taipei<span class="div">|</span>city<span class="div">|</span>streets<br>
+    alleys<span class="div">|</span>life<span class="div">|</span>geometry<br>
+    Fuji X-E5<span class="div">|</span>Nikon FE2<span class="div">|</span>shadow
+  </p>
+  <a class="ig-link" href="https://instagram.com/" target="_blank" rel="noopener">Instagram</a>
+  <div class="header-rule"></div>
+</header>
+
+<main>
+  <div class="grid" id="grid"></div>
+</main>
+
+<div class="coords-divider">25.0330&deg; N, 121.5654&deg; E</div>
+
+<section id="portraits">
+  <div class="section-head">
+    <h2>Street Portraits</h2>
+    <p class="section-bio">
+      Portrait<span class="div">|</span>Frame<span class="div">|</span>Moment
+      <span class="cn">肖像<span class="div">|</span>取景<span class="div">|</span>瞬間</span>
+    </p>
+  </div>
+  <main>
+    <div class="grid" id="portraits-grid"></div>
+  </main>
+</section>
+
+<script>
+  // ---- Top 16: fixed grid, file-named by coordinate (A1.jpg ... D4.jpg) ----
+  // Drop a photo named e.g. "photos/A1.jpg" in to fill that square.
+  // Missing files silently fall back to the placeholder texture.
+  const letters = 'ABCD';
+  const topGrid = document.getElementById('grid');
+  const topRefs = [];
+
+  for (let r = 0; r < 4; r++){
+    for (let c = 0; c < 4; c++){
+      const label = letters[r] + (c + 1);
+      topRefs.push({ label, path: `photos/${label}.jpg` });
+    }
+  }
+
+  topRefs.forEach((item, idx) => {
+    const cell = document.createElement('div');
+    cell.className = 'cell placeholder';
+    const ref = document.createElement('span');
+    ref.className = 'ref';
+    ref.textContent = item.label;
+    cell.appendChild(ref);
+    cell.addEventListener('click', () => openLightbox(topRefs, idx));
+    topGrid.appendChild(cell);
+    tryLoadPhoto(cell, item.path);
+  });
+
+  // ---- Portraits: open-ended, add filenames here as you shoot more ----
+  const portraitPhotos = [
+    'portrait-01.jpg',
+    'portrait-02.jpg',
+    'portrait-03.jpg',
+    'portrait-04.jpg',
+    'portrait-05.jpg',
+    'portrait-06.jpg',
+    'portrait-07.jpg',
+    'portrait-08.jpg'
+  ];
+
+  const portraitsGrid = document.getElementById('portraits-grid');
+  const portraitRefs = portraitPhotos.map((filename, i) => ({
+    label: String(i + 1).padStart(2, '0'),
+    path: `photos/portraits/${filename}`
+  }));
+
+  portraitRefs.forEach((item, idx) => {
+    const cell = document.createElement('div');
+    cell.className = 'cell placeholder';
+    const ref = document.createElement('span');
+    ref.className = 'ref';
+    ref.textContent = item.label;
+    cell.appendChild(ref);
+    cell.addEventListener('click', () => openLightbox(portraitRefs, idx));
+    portraitsGrid.appendChild(cell);
+    tryLoadPhoto(cell, item.path);
+  });
+
+  // Attempts to load a real photo; leaves the placeholder texture untouched on failure.
+  function tryLoadPhoto(cell, path){
+    const img = new Image();
+    img.onload = () => {
+      cell.style.backgroundImage = `url('${path}')`;
+      cell.classList.remove('placeholder');
+    };
+    img.onerror = () => { /* no file yet — keep placeholder */ };
+    img.src = path;
+  }
+
+  // ---- Lightbox (shared by both grids, cycles within whichever section opened it) ----
+  const lightbox = document.getElementById('lightbox');
+  const lbFrame = document.getElementById('lbFrame');
+  const lbRef = document.getElementById('lbRef');
+  let currentRefs = [];
+  let current = 0;
+
+  function openLightbox(refs, i){
+    currentRefs = refs;
+    current = i;
+    renderLightbox();
+    lightbox.classList.add('open');
+  }
+  function renderLightbox(){
+    const item = currentRefs[current];
+    lbRef.textContent = item.label;
+    lbFrame.classList.add('placeholder');
+    lbFrame.style.backgroundImage = '';
+    const img = new Image();
+    img.onload = () => {
+      lbFrame.style.backgroundImage = `url('${item.path}')`;
+      lbFrame.classList.remove('placeholder');
+    };
+    img.src = item.path;
+  }
+  function closeLightbox(){ lightbox.classList.remove('open'); }
+  function step(delta){
+    current = (current + delta + currentRefs.length) % currentRefs.length;
+    renderLightbox();
+  }
+
+  document.getElementById('lbClose').addEventListener('click', closeLightbox);
+  document.getElementById('lbPrev').addEventListener('click', () => step(-1));
+  document.getElementById('lbNext').addEventListener('click', () => step(1));
+  lightbox.addEventListener('click', (e) => { if (e.target === lightbox) closeLightbox(); });
+  document.addEventListener('keydown', (e) => {
+    if (!lightbox.classList.contains('open')) return;
+    if (e.key === 'Escape') closeLightbox();
+    if (e.key === 'ArrowLeft') step(-1);
+    if (e.key === 'ArrowRight') step(1);
+  });
+</script>
+
+</body>
+</html>
